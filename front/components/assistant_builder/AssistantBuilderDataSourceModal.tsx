@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CONNECTOR_PROVIDER_TO_RESOURCE_NAME } from "@app/components/assistant_builder/AssistantBuilder";
 import type { AssistantBuilderDataSourceConfiguration } from "@app/components/assistant_builder/types";
 import DataSourceResourceSelectorTree from "@app/components/DataSourceResourceSelectorTree";
+import { orderDatasourceByImportance } from "@app/lib/assistant";
 import { CONNECTOR_CONFIGURATIONS } from "@app/lib/connector_providers";
 import type { GetConnectorResourceParentsResponseBody } from "@app/pages/api/w/[wId]/data_sources/[name]/managed/parents";
 
@@ -138,42 +139,6 @@ function PickDataSource({
   show: boolean;
   onPick: (dataSource: DataSourceType) => void;
 }) {
-  // Order in the following format : connectorProvider > empty > webcrawler
-  const orderedDataSources = dataSources.sort((a, b) => {
-    const aConnector = a.connectorProvider;
-    const bConnector = b.connectorProvider;
-
-    const order = Object.keys(CONNECTOR_CONFIGURATIONS)
-      .filter(
-        (key) =>
-          CONNECTOR_CONFIGURATIONS[key as keyof typeof CONNECTOR_CONFIGURATIONS]
-            .connectorProvider !==
-          CONNECTOR_CONFIGURATIONS.webcrawler.connectorProvider
-      )
-      .map(
-        (key) =>
-          CONNECTOR_CONFIGURATIONS[key as keyof typeof CONNECTOR_CONFIGURATIONS]
-            .connectorProvider
-      );
-
-    if (aConnector === CONNECTOR_CONFIGURATIONS.webcrawler.connectorProvider) {
-      return 1;
-    }
-
-    if (bConnector === CONNECTOR_CONFIGURATIONS.webcrawler.connectorProvider) {
-      return -1;
-    }
-
-    const indexA = aConnector ? order.indexOf(aConnector) : order.length;
-    const indexB = bConnector ? order.indexOf(bConnector) : order.length;
-
-    if (indexA === -1 && indexB === -1) {
-      return 0;
-    }
-
-    return indexA - indexB;
-  });
-
   return (
     <Transition show={show} className="mx-auto max-w-6xl">
       <Page>
@@ -181,7 +146,7 @@ function PickDataSource({
           title="Select Data Sources in:"
           icon={CloudArrowLeftRightIcon}
         />
-        {orderedDataSources.map((ds) => (
+        {orderDatasourceByImportance(dataSources).map((ds) => (
           <Item.Navigation
             label={getDisplayNameForDataSource(ds)}
             icon={

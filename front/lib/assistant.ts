@@ -1,6 +1,11 @@
-import type { LightAgentConfigurationType } from "@dust-tt/types";
+import type {
+  DataSourceType,
+  LightAgentConfigurationType,
+} from "@dust-tt/types";
 import type { SupportedModel } from "@dust-tt/types";
 import { SUPPORTED_MODEL_CONFIGS } from "@dust-tt/types";
+
+import { CONNECTOR_CONFIGURATIONS } from "@app/lib/connector_providers";
 
 export function isLargeModel(model: unknown): model is SupportedModel {
   const maybeSupportedModel = model as SupportedModel;
@@ -94,4 +99,42 @@ export function compareAgentsForSort(
   if (bIndex !== -1) return 1; // Only b is in customOrder, it comes first
 
   return 0; // Default: keep the original order
+}
+
+// Order in the following format : connectorProvider > empty > webcrawler
+export function orderDatasourceByImportance(dataSources: DataSourceType[]) {
+  return dataSources.sort((a, b) => {
+    const aConnector = a.connectorProvider;
+    const bConnector = b.connectorProvider;
+
+    const order = Object.keys(CONNECTOR_CONFIGURATIONS)
+      .filter(
+        (key) =>
+          CONNECTOR_CONFIGURATIONS[key as keyof typeof CONNECTOR_CONFIGURATIONS]
+            .connectorProvider !==
+          CONNECTOR_CONFIGURATIONS.webcrawler.connectorProvider
+      )
+      .map(
+        (key) =>
+          CONNECTOR_CONFIGURATIONS[key as keyof typeof CONNECTOR_CONFIGURATIONS]
+            .connectorProvider
+      );
+
+    if (aConnector === CONNECTOR_CONFIGURATIONS.webcrawler.connectorProvider) {
+      return 1;
+    }
+
+    if (bConnector === CONNECTOR_CONFIGURATIONS.webcrawler.connectorProvider) {
+      return -1;
+    }
+
+    const indexA = aConnector ? order.indexOf(aConnector) : order.length;
+    const indexB = bConnector ? order.indexOf(bConnector) : order.length;
+
+    if (indexA === -1 && indexB === -1) {
+      return 0;
+    }
+
+    return indexA - indexB;
+  });
 }
